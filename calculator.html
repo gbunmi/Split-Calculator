@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Split Calculator</title>
+    <title>Payment Split Calculator with Receipt</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,12 +14,12 @@
             max-width: 500px;
             margin: auto;
             background: white;
-            padding: 20px;
+            padding: 20px; /* 20px padding on all sides */
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        input {
-            width: 100%;
+        input, button {
+            width: calc(100% - 20px); /* Subtract padding from width */
             padding: 10px;
             margin: 10px 0;
             border-radius: 5px;
@@ -28,14 +28,18 @@
         button {
             background-color: #28a745;
             color: white;
-            padding: 10px;
             border: none;
-            border-radius: 5px;
             cursor: pointer;
-            width: 100%;
         }
         button:hover {
             background-color: #218838;
+        }
+        .reset-btn {
+            background-color: #dc3545;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
         .result {
             margin-top: 20px;
@@ -51,55 +55,108 @@
 <div class="container">
     <h2>Payment Split Calculator</h2>
 
-    <label for="total">Total Amount Paid by Customer</label>
+    <label for="customerName">Customer Name</label>
+    <input type="text" id="customerName" placeholder="Enter customer name">
+
+    <label for="cleanerName">Cleaner Name</label>
+    <input type="text" id="cleanerName" placeholder="Enter cleaner name">
+
+    <label for="date">Date</label>
+    <input type="date" id="date">
+
+    <label for="address">Customer's Address</label>
+    <input type="text" id="address" placeholder="Enter customer's address">
+
+    <label for="total">Total Amount Paid by Customer (₦)</label>
     <input type="number" id="total" placeholder="Enter total amount">
 
-    <label for="transport">Transport Cost</label>
+    <label for="transport">Transport Cost (₦)</label>
     <input type="number" id="transport" placeholder="Enter transport cost">
 
     <label for="percentage">Company's Percentage (%)</label>
     <input type="number" id="percentage" placeholder="Enter company's percentage">
 
-    <label for="discount">Discount (Optional)</label>
-    <input type="number" id="discount" placeholder="Enter discount, if any">
+    <label for="discount">Discount Percentage (%)</label>
+    <input type="number" id="discount" placeholder="Enter discount percentage, if any">
 
     <button onclick="calculate()">Calculate</button>
 
     <div class="result" id="result"></div>
+
+    <button id="downloadBtn" style="display:none;" onclick="downloadReceipt()">Download Receipt</button>
+    <button class="reset-btn" onclick="resetForm()">Reset</button>
 </div>
 
 <script>
+    let receiptData = ''; // To store receipt info
+
     function calculate() {
-        // Get values from inputs
+        const customerName = document.getElementById('customerName').value;
+        const cleanerName = document.getElementById('cleanerName').value;
+        const date = document.getElementById('date').value;
+        const address = document.getElementById('address').value;
         const total = parseFloat(document.getElementById('total').value);
         const transport = parseFloat(document.getElementById('transport').value);
         const companyPercentage = parseFloat(document.getElementById('percentage').value);
-        const discount = parseFloat(document.getElementById('discount').value) || 0;
+        const discountPercentage = parseFloat(document.getElementById('discount').value) || 0;
 
-        // Check for valid inputs
         if (isNaN(total) || isNaN(transport) || isNaN(companyPercentage)) {
             document.getElementById('result').innerHTML = "Please enter valid numbers.";
             return;
         }
 
-        // Calculate the remaining amount after transport
         const remaining = total - transport;
-
-        // Calculate company's share
         const companyShare = (remaining * (companyPercentage / 100)).toFixed(2);
-
-        // Apply discount to company's share
-        const companyShareAfterDiscount = (companyShare - discount).toFixed(2);
-
-        // Calculate worker's payment (remaining percentage)
+        const discountAmount = (companyShare * (discountPercentage / 100)).toFixed(2);
+        const companyShareAfterDiscount = (companyShare - discountAmount).toFixed(2);
         const workerPayment = (remaining - companyShare).toFixed(2);
 
-        // Display results
         document.getElementById('result').innerHTML = `
-            <p><strong>Worker's Payment:</strong> $${workerPayment}</p>
-            <p><strong>Company's Share (after discount):</strong> $${companyShareAfterDiscount}</p>
-            <p><strong>Discount Applied:</strong> $${discount.toFixed(2)}</p>
+            <p><strong>Customer Name:</strong> ${customerName}</p>
+            <p><strong>Cleaner Name:</strong> ${cleanerName}</p>
+            <p><strong>Date:</strong> ${date}</p>
+            <p><strong>Customer's Address:</strong> ${address}</p>
+            <hr>
+            <p><strong>Worker's Payment:</strong> ₦${workerPayment}</p>
+            <p><strong>Company's Share (after discount):</strong> ₦${companyShareAfterDiscount}</p>
+            <p><strong>Discount Applied:</strong> ${discountPercentage}% (₦${discountAmount})</p>
         `;
+
+        receiptData = `
+Customer Name: ${customerName}
+Cleaner Name: ${cleanerName}
+Date: ${date}
+Customer's Address: ${address}
+
+Total Amount Paid by Customer: ₦${total.toFixed(2)}
+Transport Cost: ₦${transport.toFixed(2)}
+Worker's Payment: ₦${workerPayment}
+Company's Share (after discount): ₦${companyShareAfterDiscount}
+Discount Applied: ${discountPercentage}% (₦${discountAmount})
+        `;
+
+        document.getElementById('downloadBtn').style.display = 'block';
+    }
+
+    function downloadReceipt() {
+        const blob = new Blob([receiptData], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'receipt.txt';
+        link.click();
+    }
+
+    function resetForm() {
+        document.getElementById('customerName').value = '';
+        document.getElementById('cleanerName').value = '';
+        document.getElementById('date').value = '';
+        document.getElementById('address').value = '';
+        document.getElementById('total').value = '';
+        document.getElementById('transport').value = '';
+        document.getElementById('percentage').value = '';
+        document.getElementById('discount').value = '';
+        document.getElementById('result').innerHTML = '';
+        document.getElementById('downloadBtn').style.display = 'none';
     }
 </script>
 
